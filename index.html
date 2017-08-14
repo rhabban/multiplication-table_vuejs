@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/paper/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-awusxf8AUojygHf2+joICySzB780jVvQaVCAt1clU3QsyAitLGul28Qxb2r1e5g+" crossorigin="anonymous">
+    <script src="js/lib/jquery/dist/jquery.min.js"></script>
+    <script src="js/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="js/lib/vue/dist/vue.js"></script>
+    <script src="js/lib/vue-resource/dist/vue-resource.js"></script>
+    <script src="js/lib/vue-router/dist/vue-router.js"></script>
+    <script src="js/custom.js"></script>
+    <script src="js/Operation.js"></script>
+    <script src="js/Session.js"></script>
+
+    <link href="https://cdn.datatables.net/plug-ins/1.10.7/integration/bootstrap/3/dataTables.bootstrap.css"
+          rel="stylesheet"/>
+    <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/plug-ins/1.10.7/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+
+    <title>VueJS Project</title>
+
+    <!-- Styles -->
+    <link href="css/app.css" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+    <nav class="navbar navbar-default navbar-static-top">
+        <div class="container">
+            <div class="navbar-header">
+
+                <!-- Collapsed Hamburger -->
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                        data-target="#app-navbar-collapse">
+                    <span class="sr-only">Toggle Navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+
+                <!-- Branding Image -->
+
+                <router-link class="navbar-brand" :to="{ name: 'home' }">
+                    VueJS Project
+                </router-link>
+            </div>
+
+            <div class="collapse navbar-collapse" id="app-navbar-collapse">
+                <!-- Left Side Of Navbar -->
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="/">About</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <router-view></router-view>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="tpl-home" type="text/x-template">
+    <section>
+        <h2> Sélectionner un mode de jeu </h2>
+
+        <hr>
+        <router-link class="btn btn-secondary btn-lg btn-block" :to="{ name: 'table' }">
+            Mode apprentissage
+        </router-link>
+        <router-link class="btn btn-primary btn-lg btn-block" :to="{ name: 'evaluating' }">
+            Mode évaluation
+        </router-link>
+        <hr>
+        <router-link class="btn btn-default btn-lg btn-block" :to="{ name: 'history' }">
+            Historique
+        </router-link>
+    </section>
+</script>
+
+<script id="tpl-operation" type="text/x-template">
+    <section>
+        <h2 v-if="$route.name == 'learning'">Mode apprentissage  <small> table de {{ $route.params.table }}</h2>
+        <h2 v-if="$route.name == 'evaluating'">Mode évaluation</h2>
+
+        <div class="panel panel-primary" v-if="currentSession">
+            <div class="panel-heading">Calcul : {{ currentSession.index+1 }}/ {{ currentSession.operations_count }}</div>
+            <div class="panel-body text-center">
+                <h3>{{ currentSession.getOperation().displayCalc() }} ?</h3>
+                <br>
+                <span>
+                    <button @click="checkResult" v-for="n in currentSession.getOperation().getChoices()"
+                            class="btn btn-default btn-lg btn-answer">{{ n }}
+                    </button>
+                </span>
+            </div>
+
+        </div>
+    </section>
+</script>
+
+<script id="tpl-table" type="text/x-template">
+    <section>
+        <div class="panel panel-default">
+            <div class="panel-heading">Sélectionner une table</div>
+            <div class="panel-body">
+                <div class="list-group">
+                    <router-link v-for="n in 10" class="list-group-item table-item" :to="{ name: 'learning', params: { table: n } }">
+                        {{ n }}
+                    </router-link>
+                </div>
+            </div>
+        </div>
+        <div class="text-center">
+            <router-link class="btn btn-secondary" :to="{ name: 'home' }">
+                Accueil
+            </router-link>
+        </div>
+    </section>
+</script>
+
+<script id="tpl-results" type="text/x-template">
+    <section>
+        <h3> Session du {{ currentSession.date }} <small>Durée {{ currentSession.duration }}s</small></h3>
+        <p class="lead">Tu as fait {{ currentSession.errors_count }} fautes</p>
+        <hr>
+        <div v-for="(operation, index) in currentSession.operations" class="panel"
+             :class="operation.getErrors() == 0 ? 'panel-success' : 'panel-danger'">
+            <div class="panel-heading">Calcul : {{ index+1 }}/{{ currentSession.operations_count}} - <small>Durée {{ operation.duration }}s</small></div>
+            <div class="panel-body text-center">
+                <h3> {{ operation.op1 }} * {{ operation.op2 }} ?</h3>
+                <br>
+
+                <p><small>{{ operation.getErrors() }} faute(s)</small></p>
+            <span>
+                <button v-for="choice in operation.choices" class="btn btn-lg"
+                        :class="operation.res ==  choice ? 'btn-success' : operation.answers.indexOf(choice) > -1 ? 'btn-danger' : 'btn-default'">{{ choice }}
+                </button>
+            </span>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <router-link class="btn btn-secondary" :to="{ name: 'home' }">
+                Accueil
+            </router-link>
+        </div>
+        <hr>
+    </section>
+</script>
+
+<script id="tpl-history" type="text/x-template">
+    <section>
+        <div class="panel panel-default">
+            <div class="panel-heading">Sessions enregistrées</div>
+            <div class="panel-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Mode</th>
+                            <th>Table</th>
+                            <th>Opérations</th>
+                            <th>Durée</th>
+                            <th>Nombre de fautes</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(session, index) in sessions">
+                            <td>{{ session.date }}</td>
+                            <td>{{ session.date }}</td>
+                            <td>{{ session.table }}</td>
+                            <td>{{ session.operations_count }}</td>
+                            <td>{{ session.duration }}</td>
+                            <td>{{ session.errors_count }}</td>
+                            <td><button class="btn btn-secondary" :data-index="index" @click="getResultPage">Voir</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="text-center">
+            <router-link class="btn btn-secondary" :to="{ name: 'home' }">
+                Accueil
+            </router-link>
+        </div>
+    </section>
+</script>
+
+<script src="js/app.js"></script>
+</body>
+</html>
